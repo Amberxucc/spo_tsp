@@ -1,0 +1,127 @@
+#coding:gbk
+import random
+import math
+import matplotlib.pyplot as plt
+global n,m,u1,u2;    #n个粒子， m个城市 u1,u2为交换子保留概率
+n=100;m=14;          
+gbest = 10000;    gbestway= [0.0]*m;       #gbest记录全局最优适应值，gbestway记录全局最优解
+pbestway =  [[0]*(m) for i in range(n)];   pbest = [0.0]*n;   #pbest记录个体最优适应值，gbestway记录个体最优解
+road = [[0]*(m) for i in range(n)]   #开辟n*m的数组记录每个粒子当前位置
+class no:                       #该类表示每个点的坐标
+    def __init__(self,x,y):
+        self.x=x;
+        self.y=y;
+p=[];
+class so:                       #该类表示交换子
+    def __init__(self,x,y):
+        self.x=x;
+        self.y=y;
+ss=[so]*100;     global co;        #暂存减法结果            
+speed = [[so]*(100) for i in range(n)]     #每个粒子的速度，即交换序
+spco= [0.0]*n;                             #记录交换序的个数
+def draw(t):              #该函数用于描绘路线图
+    x=[0]*(m+1);y=[0]*(m+1);
+    for i in range(m):
+        x[i] =p[t[i]].x;
+        y[i] =p[t[i]].y;
+    x[m] =p[t[0]].x;
+    y[m] =p[t[0]].y;
+    plt.plot(x,y,color='r',marker='*' ); 
+    plt.show();
+def  mycol():                           #城市坐标输入
+        p.append(no( 16 , 96 ));
+        p.append(no( 16 , 94 )); p.append(no( 20 , 92 )); p.append(no( 22 , 93 )); p.append(no( 25 , 97 )); p.append(no( 22 , 96 )); p.append(no( 20 , 97 ));
+        p.append(no( 17 , 96 )); p.append(no( 16 , 97 )); p.append(no( 14 , 98 )); p.append(no( 17, 97 )); p.append(no( 21 , 95 )); p.append(no( 19 , 97 ));
+        p.append(no( 20 , 94 )); 
+ 
+def get_value(t):        #计算粒子的函数适应值
+    ans = 0.0;
+    for i in range(1,m):     #两点距离公式
+        ans += math.sqrt((p[t[i]].x-p[t[i-1]].x) *(p[t[i]].x-p[t[i-1]].x)  +(p[t[i]].y-p[t[i-1]].y) *(p[t[i]].y-p[t[i-1]].y));
+    ans +=  math.sqrt((p[t[0]].x-p[t[m-1]].x) * (p[t[0]].x-p[t[m-1]].x)  +(p[t[0]].y-p[t[m-1]].y) *(p[t[0]].y-p[t[m-1]].y));
+    return ans;
+def cop(a,b,le):     #把b数组的值赋值a数组
+    for i in range(le):
+        a[i]=b[i]
+def rand(g):                 # 随机解生成函数
+    vis = [0]*m
+    for i in range(m):
+        vis[i]=0;
+    on= 0
+    while on<m:
+        te = random.randint(0,m-1);
+        if(vis[te]==0):
+            vis[te]=1;
+            g[on]=te;
+            on+=1;
+def find (g,ob):         #在数组g中寻找，值为ob的下标，并返回下标
+    for i in range(m):
+        if(g[i]==ob):
+            return i;
+def  cat(a, c,u):   #求解a减去解b的交换序结果  将其保存在ss序列 u为保留概率
+    global co;
+    co = 0;
+    b = [0]*m;
+    for i in range(m):
+        b[i]=c[i]
+    ob=0;
+    for i in range(m):
+        if(a[i]==b[i]):continue;
+        ob=find(b,a[i])
+        if(random.random() < u): 
+            ss[co]=so(i,ob)
+            co+=1
+        b[i],b[ob]=b[ob],b[i]
+def add(g,sv,le):                  #解g加上长度为le的交换序sv
+    a=0;b=0;
+    for i in range(le):
+        a=sv[i].x;b=sv[i].y;
+        g[a],g[b]=g[b], g[a];
+        
+def init():            #初始化函数
+    global gbest
+    for i in range(n):
+        spco[i]=0;
+        rand(road[i]);
+        cop(pbestway[i],road[i],m); #将局部最优设为初始化的随机解
+        pbest[i]= get_value(road[i]);
+        if(pbest[i] < gbest):
+            gbest = pbest[i];
+            cop(gbestway,pbestway[i],m);
+def update(i,r):   #更新i个体的函数适应值
+    global gbest;
+    te = get_value(r);        #计算适应值
+    if(te < pbest[i]):         #个体最优更新
+        pbest[i] =te;cop(pbestway[i],r,m);
+    if(te < gbest):              #全局最优更新
+            gbest = te;cop(gbestway,r,m);
+    
+def slove():    #执行函数
+    global co,gbest,u1,u2
+    t1 = [0]*m;t2=[0]*m;
+    for i in range(m):
+        t1[i]=i
+        t2[i]=i;    
+    u1 = 0.6;     #个体最优交换子保留概率
+    u2 = 0.8     #全局最优交换子保留概率
+    for i in range(n):
+        for k in range(m):t1[k]=k;t2[k]=k; #构造两个解t1，t2求基本交换序
+        add(t1,speed[i],spco[i]);
+        cat(pbestway[i],road[i],u1);       #与个体最优解相减
+        add(t1,ss,co);
+        cat(gbestway,road[i],u2);            #与全局最优解相减
+        add(t1,ss,co);
+        cat(t1,t2,1)             #求出基本交换序
+        for j in range(co): speed[i][j].x = ss[j].x;speed[i][j].y = ss[j].y    #更新个体速度;
+        spco[i]=co;
+        add(road[i],speed[i],spco[i]);  #将速度作用到当前位置
+        update(i,road[i]);   #更新函数适应值
+        
+mycol();            #数据输入    
+init();                 #数据初始化
+for i in range(10000):      #控制迭代次数
+    slove();
+    if(gbest<32.5):  print('迭代次数',i); break;    #达到最优解提前退出
+print(round(gbest,3));       #打印最优解距离保留三位小数
+draw(gbestway);                      #画图描绘路线
+print(gbestway);                     #打印路线，以序列表示
